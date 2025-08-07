@@ -17,11 +17,12 @@ public class PlantController : MonoBehaviour
         Terrain terrain = Core.instance.ground;
         xBound = terrain.GetComponent<Terrain>().terrainData.size.x;
         zBound = terrain.GetComponent<Terrain>().terrainData.size.z;
+
         for (int i = 0; i < 100; i++)
         {
-            GameObject newPlant = Instantiate(plantPrefab, transform);
+            GameObject newPlant = Instantiate(plantPrefab);
             newPlant.GetComponent<Plant>().SetVisual(plantModels[Random.Range(0, plantModels.Count - 1)]);
-            newPlant.GetComponent<Plant>().SetValues(Random.Range(10f, 100f), Random.Range(0f, 0.5f), Random.Range(0f, 0.5f));
+            newPlant.GetComponent<Plant>().SetValues(Random.Range(10f, 100f), Random.Range(0.1f, 0.2f), Random.Range(0.1f, 0.25f));
             float x = Random.Range(0, xBound);
             float z = Random.Range(0, zBound);
             float y = terrain.SampleHeight(new Vector3(x, 0, z));
