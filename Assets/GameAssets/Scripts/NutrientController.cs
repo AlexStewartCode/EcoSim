@@ -1,3 +1,4 @@
+using System;
 using UnityEditor.TextCore.Text;
 using UnityEngine;
 using static UnityEngine.GraphicsBuffer;
@@ -29,15 +30,43 @@ public class NutrientController : MonoBehaviour
         
     }
 
-    public float GetNutrients(float x, float y)
+    public float GetNutrients(float x, float y, float radius)
     {
         int locX = Mathf.FloorToInt(x * sizeX);
         int locY = Mathf.FloorToInt(y * sizeY);
 
-        return nutrientMap[locX, locY];
+        int ceilRad = Mathf.CeilToInt(radius);
+        float totalNutrients = 0; 
+
+        for(int r = -ceilRad; r < ceilRad; r++)
+        {
+            for (int c = -ceilRad; c < ceilRad; c++)
+            {
+                if((locX + ceilRad > 0 && locX + ceilRad < sizeX) && (locY + ceilRad > 0 && locY + ceilRad < sizeY))
+                {
+                    int fraction = Mathf.Abs(r) + Mathf.Abs(c);
+                    if(fraction == 0)
+                    {
+                        totalNutrients += nutrientMap[locX + ceilRad, locY + ceilRad];
+                    }
+                    else
+                    {
+                        totalNutrients += nutrientMap[locX + ceilRad, locY + ceilRad] / (fraction * 2);
+                    }
+                }
+            }
+        }
+
+        if(totalNutrients == 0)
+        {
+            float thing = nutrientMap[locX, locY];
+            Debug.Log("HERE" + thing);
+        }
+
+        return totalNutrients;
     }
 
-    public void UseNutrients(float x, float y, float used)
+    public void UseNutrients(float x, float y, float radius, float used)
     {
         int locX = Mathf.FloorToInt(x * sizeX);
         int locY = Mathf.FloorToInt(y * sizeY);
@@ -61,26 +90,13 @@ public class NutrientController : MonoBehaviour
             for (int c = 0; c < sizeY; c++)
             {
                 float colorValue = nutrientMap[r, c];
-                texture.SetPixel(r, c, new Color(colorValue, colorValue, colorValue));
+                texture.SetPixel(r, c, new Color(colorValue, colorValue, colorValue, 0.5f));
             }
         }
 
         texture.Apply();
         meshRenderer.material.mainTexture = texture;
-    }
-
-    private void ConsoleDump()
-    {
-        string toPrint = "\n";
-        for (int r = 0; r < sizeX; r++)
-        {
-            for (int c = 0; c < sizeY; c++)
-            {
-                toPrint += nutrientMap[r, c] + " ";
-            }
-            toPrint += "\n";
-        }
-        Debug.Log(toPrint);
+        meshRenderer.gameObject.SetActive(true);
     }
 
     #if UNITY_EDITOR
@@ -94,11 +110,6 @@ public class NutrientController : MonoBehaviour
             if (GUILayout.Button("Sample Button"))
             {
                 (target as NutrientController).Render();
-            }
-
-            if(GUILayout.Button("Dump it"))
-            {
-                (target as NutrientController).ConsoleDump();
             }
         }
     }

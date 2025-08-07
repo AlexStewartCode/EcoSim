@@ -42,9 +42,14 @@ public class Plant : MonoBehaviour
 
         float x = transform.position.x / terrain.terrainData.size.x;
         float y = transform.position.z / terrain.terrainData.size.z;
+        float size = visual.transform.localScale.x;
 
-        float nutrientsAvailable = nutrientCont.GetNutrients(x, y);
+        float nutrientsAvailable = nutrientCont.GetNutrients(x, y, size);
+
+        Debug.Log($"Nutrients available {nutrientsAvailable}");
+
         float nutrientsNeededFrame = (nutrientNeed * Time.deltaTime);
+
         if (nutrientsNeededFrame > nutrientsAvailable)
         {
             healthCurrent -= Time.deltaTime * 0.1f * healthMax;
@@ -52,7 +57,7 @@ public class Plant : MonoBehaviour
         else
         {
             visual.transform.localScale += visual.transform.localScale * (growthRate * Time.deltaTime);
-            nutrientCont.UseNutrients(x, y, nutrientsNeededFrame);
+            nutrientCont.UseNutrients(x, y, size, nutrientsNeededFrame);
             nutrientsConsumed += nutrientsNeededFrame;
         }
 
