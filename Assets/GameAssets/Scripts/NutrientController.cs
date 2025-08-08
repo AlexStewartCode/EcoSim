@@ -7,8 +7,8 @@ using static UnityEngine.UIElements.UxmlAttributeDescription;
 public class NutrientController : MonoBehaviour
 {
     private float[,] nutrientMap;
-    [SerializeField, Range(10, 100)] int sizeX;
-    [SerializeField, Range(10, 100)] int sizeY;
+    [SerializeField, Range(10, 256)] int sizeX;
+    [SerializeField, Range(10, 256)] int sizeY;
     [SerializeField] MeshRenderer meshRenderer; 
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
@@ -28,6 +28,66 @@ public class NutrientController : MonoBehaviour
     void Update()
     {
         
+    }
+
+    public bool PlantNutrientUse(float x, float y, float radius, float nutrientsNeeded)
+    {
+        int locX = Mathf.FloorToInt(x * sizeX);
+        int locY = Mathf.FloorToInt(y * sizeY);
+
+        nutrientMap[locX - 1, locY] = 0;
+
+        int flooredRadius = Mathf.FloorToInt(radius);
+        float totalNutrients = nutrientMap[locX, locY];
+        float[] nutrientsAvailable = new float[flooredRadius * 2 + 1];
+        float[] amountToUse = new float[flooredRadius * 2 + 1];
+
+        for (int r = -flooredRadius; r <= flooredRadius; r++)
+        {
+            int currentLocX = locX + r;  
+            if(currentLocX > 0 && currentLocX < sizeX)
+            {
+                if(r != 0)
+                {
+                    nutrientsAvailable[flooredRadius + r] = nutrientMap[currentLocX, locY] / (Mathf.Abs(r) * 2);
+                    totalNutrients += nutrientMap[currentLocX, locY] / (Mathf.Abs(r) * 2);
+                }
+                else
+                {
+                    nutrientsAvailable[flooredRadius] = nutrientMap[currentLocX, locY];
+                }
+            }
+        }
+
+        if (totalNutrients < nutrientsNeeded)
+        {
+            return false; 
+        }
+
+        /*string output = "NUTRIENTS AVAILABLE\n";
+        foreach (float n in nutrientsAvailable)
+        {
+            output += n + " ";
+        }
+        Debug.Log(output);
+        */
+
+        //Normalizing 
+        for(int r = 0; r < nutrientsAvailable.Length; r++)
+        {
+            amountToUse[r] = (nutrientsAvailable[r] / totalNutrients) * nutrientsNeeded;
+        }
+
+        /*
+        string output2 = "PULLING\n";
+        foreach (float n in amountToUse)
+        {
+            output2 += n + " ";
+        }
+        Debug.Log(output2);
+        */
+
+        return true; 
     }
 
     public float GetNutrients(float x, float y, float radius)
@@ -55,12 +115,6 @@ public class NutrientController : MonoBehaviour
                     }
                 }
             }
-        }
-
-        if(totalNutrients == 0)
-        {
-            float thing = nutrientMap[locX, locY];
-            Debug.Log("HERE" + thing);
         }
 
         return totalNutrients;

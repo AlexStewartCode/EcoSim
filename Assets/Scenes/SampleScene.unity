@@ -152,7 +152,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   plantPrefab: {fileID: 4454294744824292065, guid: 20d627f37ea26f346bf0c20e82a4152a, type: 3}
   plantModels:
-  - {fileID: 919132149155446097, guid: e3d2efed8d0c55a4ca5bfa35b9f6c6c7, type: 3}
+  - {fileID: 8704148140120826694, guid: f89e947d8ef527b4a939de047e8e2817, type: 3}
 --- !u!114 &23266656
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -165,8 +165,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 881bafe4bc0f5d747a4fa68fb5fc9126, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  sizeX: 100
-  sizeY: 100
+  sizeX: 256
+  sizeY: 256
   meshRenderer: {fileID: 823137140}
 --- !u!114 &23266657
 MonoBehaviour:
@@ -567,7 +567,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!64 &823137139
 MeshCollider:
   m_ObjectHideFlags: 0

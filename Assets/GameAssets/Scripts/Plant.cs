@@ -44,13 +44,15 @@ public class Plant : MonoBehaviour
         float y = transform.position.z / terrain.terrainData.size.z;
         float size = visual.transform.localScale.x;
 
-        float nutrientsAvailable = nutrientCont.GetNutrients(x, y, size);
+        //float nutrientsAvailable = nutrientCont.GetNutrients(x, y, size);
 
-        Debug.Log($"Nutrients available {nutrientsAvailable}");
+        //float nutrientsNeededFrame = (nutrientNeed * Time.deltaTime);
 
-        float nutrientsNeededFrame = (nutrientNeed * Time.deltaTime);
+        float nutrientsNeededFrame = (nutrientNeed);
 
-        if (nutrientsNeededFrame > nutrientsAvailable)
+        bool CanStayAlive = nutrientCont.PlantNutrientUse(x, y, size, nutrientsNeededFrame);
+
+        /*if (nutrientsNeededFrame > nutrientsAvailable)
         {
             healthCurrent -= Time.deltaTime * 0.1f * healthMax;
         }
@@ -65,6 +67,6 @@ public class Plant : MonoBehaviour
         {
             nutrientCont.AddNutrients(x, y, (nutrientsConsumed * 0.9f));
             isAlive = false;
-        }
+        }*/
     }
 }
