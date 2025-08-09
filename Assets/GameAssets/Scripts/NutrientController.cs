@@ -35,26 +35,27 @@ public class NutrientController : MonoBehaviour
         int locX = Mathf.FloorToInt(x * sizeX);
         int locY = Mathf.FloorToInt(y * sizeY);
 
-        nutrientMap[locX - 1, locY] = 0;
-
         int flooredRadius = Mathf.FloorToInt(radius);
         float totalNutrients = nutrientMap[locX, locY];
-        float[] nutrientsAvailable = new float[flooredRadius * 2 + 1];
-        float[] amountToUse = new float[flooredRadius * 2 + 1];
+
+        float[,] nutrientsAvailable = new float[flooredRadius * 2 + 1, flooredRadius * 2 + 1];
 
         for (int r = -flooredRadius; r <= flooredRadius; r++)
         {
-            int currentLocX = locX + r;  
-            if(currentLocX > 0 && currentLocX < sizeX)
+            int currentLocX = locX + r; 
+
+            for(int c = -flooredRadius; c <= flooredRadius; c++)
             {
-                if(r != 0)
+                int currentLocY = locY + c; 
+
+                if(r == 0 && c == 0)
                 {
-                    nutrientsAvailable[flooredRadius + r] = nutrientMap[currentLocX, locY] / (Mathf.Abs(r) * 2);
-                    totalNutrients += nutrientMap[currentLocX, locY] / (Mathf.Abs(r) * 2);
+                    nutrientsAvailable[flooredRadius, flooredRadius] = nutrientMap[currentLocX, currentLocY];
                 }
                 else
                 {
-                    nutrientsAvailable[flooredRadius] = nutrientMap[currentLocX, locY];
+                    nutrientsAvailable[flooredRadius + r, flooredRadius + c] = nutrientMap[currentLocX, currentLocY] / ((Mathf.Abs(r) + Mathf.Abs(c)) * 2);
+                    totalNutrients += nutrientMap[currentLocX, currentLocY] / ((Mathf.Abs(r) + Mathf.Abs(c)) * 2);
                 }
             }
         }
@@ -64,28 +65,26 @@ public class NutrientController : MonoBehaviour
             return false; 
         }
 
-        /*string output = "NUTRIENTS AVAILABLE\n";
-        foreach (float n in nutrientsAvailable)
-        {
-            output += n + " ";
-        }
-        Debug.Log(output);
-        */
+        float[,] amountToUse = new float[flooredRadius * 2 + 1, flooredRadius * 2 + 1];
 
-        //Normalizing 
-        for(int r = 0; r < nutrientsAvailable.Length; r++)
+        for(int r = 0; r < nutrientsAvailable.GetLength(0); r++)
         {
-            amountToUse[r] = (nutrientsAvailable[r] / totalNutrients) * nutrientsNeeded;
+            for (int c = 0; c < nutrientsAvailable.GetLength(1); c++)
+            {
+                amountToUse[r, c] = (nutrientsAvailable[r, c] / totalNutrients) * nutrientsNeeded;
+            }
         }
 
-        /*
-        string output2 = "PULLING\n";
-        foreach (float n in amountToUse)
+        string output2 = "NUTRIENTS TO USE\n";
+        for (int r = 0; r < amountToUse.GetLength(0); r++)
         {
-            output2 += n + " ";
+            for (int c = 0; c < amountToUse.GetLength(1); c++)
+            {
+                output2 += amountToUse[r, c] + " ";
+            }
+            output2 += "\n";
         }
         Debug.Log(output2);
-        */
 
         return true; 
     }
