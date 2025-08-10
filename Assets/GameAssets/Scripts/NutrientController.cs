@@ -30,7 +30,21 @@ public class NutrientController : MonoBehaviour
         
     }
 
-    public bool PlantNutrientUse(float x, float y, float radius, float nutrientsNeeded)
+    public void Step(float dTime)
+    {
+        for (int r = 0; r < sizeX; r++)
+        {
+            for (int c = 0; c < sizeY; c++)
+            {
+                if (nutrientMap[r,c] < 1)
+                {
+                    nutrientMap[r, c] += (0.1f * dTime);
+                }
+            }
+        }
+    }
+
+    public float PlantNutrientUse(float x, float y, float radius, float nutrientsNeeded)
     {
         int locX = Mathf.FloorToInt(x * sizeX);
         int locY = Mathf.FloorToInt(y * sizeY);
@@ -38,84 +52,113 @@ public class NutrientController : MonoBehaviour
         int flooredRadius = Mathf.FloorToInt(radius);
         float totalNutrients = nutrientMap[locX, locY];
 
-        float[,] nutrientsAvailable = new float[flooredRadius * 2 + 1, flooredRadius * 2 + 1];
+        float[,] nutrientsAvailable;
 
+        try
+        {
+            nutrientsAvailable = new float[flooredRadius * 2 + 1, flooredRadius * 2 + 1];
+        } catch (Exception e)
+        {
+            Debug.Log($"x : {x} y : {y} radius : {radius} nutrients needed : {nutrientsNeeded}");
+            return 2000000;
+        }
+
+        // Calculate total amount of nutrients available to the plant, at a 1/ (2 * steps from origin) ratio. 
         for (int r = -flooredRadius; r <= flooredRadius; r++)
         {
             int currentLocX = locX + r; 
 
             for(int c = -flooredRadius; c <= flooredRadius; c++)
             {
-                int currentLocY = locY + c; 
-
-                if(r == 0 && c == 0)
+                int currentLocY = locY + c;
+                if (currentLocX < 0 || currentLocX >= nutrientMap.GetLength(0) || currentLocY < 0 || currentLocY >= nutrientMap.GetLength(1))
                 {
-                    nutrientsAvailable[flooredRadius, flooredRadius] = nutrientMap[currentLocX, currentLocY];
+                    nutrientsAvailable[flooredRadius, flooredRadius] = 0;
                 }
                 else
                 {
-                    nutrientsAvailable[flooredRadius + r, flooredRadius + c] = nutrientMap[currentLocX, currentLocY] / ((Mathf.Abs(r) + Mathf.Abs(c)) * 2);
-                    totalNutrients += nutrientMap[currentLocX, currentLocY] / ((Mathf.Abs(r) + Mathf.Abs(c)) * 2);
+                    if (r == 0 && c == 0)
+                    {
+                        nutrientsAvailable[flooredRadius, flooredRadius] = nutrientMap[currentLocX, currentLocY];
+                    }
+                    else
+                    {
+                        nutrientsAvailable[flooredRadius + r, flooredRadius + c] = nutrientMap[currentLocX, currentLocY] / ((Mathf.Abs(r) + Mathf.Abs(c)) * 2);
+                        totalNutrients += nutrientMap[currentLocX, currentLocY] / ((Mathf.Abs(r) + Mathf.Abs(c)) * 2);
+                    }
                 }
             }
         }
 
+        // If not enough nutrients are available to the plant to sustain it, return false. 
+        // Can be changed to returning a float value indicating the deficit in nutrients with the plant taking that much in health damage 
         if (totalNutrients < nutrientsNeeded)
         {
-            return false; 
+            for (int r = -flooredRadius; r <= flooredRadius; r++)
+            {
+                int currentLocX = locX + r;
+
+                for (int c = -flooredRadius; c <= flooredRadius; c++)
+                {
+                    int currentLocY = locY + c;
+                    if (currentLocX >= 0 && currentLocX < nutrientMap.GetLength(0) && currentLocY >= 0 && currentLocY < nutrientMap.GetLength(1))
+                    {
+                        nutrientMap[currentLocX, currentLocY] -= (nutrientsAvailable[flooredRadius + r, flooredRadius + c]);
+                    }
+                }
+            }
+            return nutrientsNeeded - totalNutrients;
         }
 
-        float[,] amountToUse = new float[flooredRadius * 2 + 1, flooredRadius * 2 + 1];
-
-        for(int r = 0; r < nutrientsAvailable.GetLength(0); r++)
+        for (int r = -flooredRadius; r <= flooredRadius; r++)
         {
-            for (int c = 0; c < nutrientsAvailable.GetLength(1); c++)
+            int currentLocX = locX + r;
+
+            for (int c = -flooredRadius; c <= flooredRadius; c++)
             {
-                amountToUse[r, c] = (nutrientsAvailable[r, c] / totalNutrients) * nutrientsNeeded;
+                int currentLocY = locY + c;
+                if (currentLocX >= 0 && currentLocX < nutrientMap.GetLength(0) && currentLocY >= 0 && currentLocY < nutrientMap.GetLength(1))
+                {
+                    nutrientMap[currentLocX, currentLocY] -= (nutrientsAvailable[flooredRadius + r, flooredRadius + c] / totalNutrients) * nutrientsNeeded;
+                }
             }
         }
-
-        string output2 = "NUTRIENTS TO USE\n";
-        for (int r = 0; r < amountToUse.GetLength(0); r++)
-        {
-            for (int c = 0; c < amountToUse.GetLength(1); c++)
-            {
-                output2 += amountToUse[r, c] + " ";
-            }
-            output2 += "\n";
-        }
-        Debug.Log(output2);
-
-        return true; 
+        return 0; 
     }
 
-    public float GetNutrients(float x, float y, float radius)
+    public float GetAvailNutrients(float x, float y, float radius)
     {
         int locX = Mathf.FloorToInt(x * sizeX);
         int locY = Mathf.FloorToInt(y * sizeY);
 
-        int ceilRad = Mathf.CeilToInt(radius);
-        float totalNutrients = 0; 
+        int flooredRadius = Mathf.FloorToInt(radius);
+        float totalNutrients = nutrientMap[locX, locY];
 
-        for(int r = -ceilRad; r < ceilRad; r++)
+        // Calculate total amount of nutrients available to the plant, at a 1/ (2 * steps from origin) ratio. 
+        for (int r = -flooredRadius; r <= flooredRadius; r++)
         {
-            for (int c = -ceilRad; c < ceilRad; c++)
+            int currentLocX = locX + r;
+
+            for (int c = -flooredRadius; c <= flooredRadius; c++)
             {
-                if((locX + ceilRad > 0 && locX + ceilRad < sizeX) && (locY + ceilRad > 0 && locY + ceilRad < sizeY))
+                int currentLocY = locY + c;
+                if (currentLocX < 0 || currentLocX >= nutrientMap.GetLength(0) || currentLocY < 0 || currentLocY >= nutrientMap.GetLength(1))
                 {
-                    int fraction = Mathf.Abs(r) + Mathf.Abs(c);
-                    if(fraction == 0)
+
+                }
+                else
+                {
+                    if (r == 0 && c == 0)
                     {
-                        totalNutrients += nutrientMap[locX + ceilRad, locY + ceilRad];
+                        
                     }
                     else
                     {
-                        totalNutrients += nutrientMap[locX + ceilRad, locY + ceilRad] / (fraction * 2);
+                        totalNutrients += nutrientMap[currentLocX, currentLocY] / ((Mathf.Abs(r) + Mathf.Abs(c)) * 2);
                     }
                 }
             }
         }
-
         return totalNutrients;
     }
 
@@ -127,12 +170,60 @@ public class NutrientController : MonoBehaviour
         nutrientMap[locX, locY] -= used;
     }
 
-    public void AddNutrients(float x, float y, float added)
+    public void AddNutrients(float x, float y, float added, float radius)
     {
         int locX = Mathf.FloorToInt(x * sizeX);
         int locY = Mathf.FloorToInt(y * sizeY);
 
-        nutrientMap[locX, locY] += added;
+        int flooredRadius = Mathf.FloorToInt(radius);
+        float totalDistro = 0; 
+
+        for (int r = -flooredRadius; r <= flooredRadius; r++)
+        {
+            int currentLocX = locX + r;
+
+            for (int c = -flooredRadius; c <= flooredRadius; c++)
+            {
+                int currentLocY = locY + c;
+                if (currentLocX >= 0 && currentLocX < nutrientMap.GetLength(0) && currentLocY >= 0 && currentLocY < nutrientMap.GetLength(1))
+                {
+                    if (r == 0 && c == 0)
+                    {
+                        totalDistro += 1;
+                    }
+                    else
+                    {
+                        totalDistro += 1.0f / ((Mathf.Abs(r) + Mathf.Abs(c)) * 2);
+                    }
+                }
+            }
+        }
+
+        for (int r = -flooredRadius; r <= flooredRadius; r++)
+        {
+            int currentLocX = locX + r;
+
+            for (int c = -flooredRadius; c <= flooredRadius; c++)
+            {
+                int currentLocY = locY + c;
+                if (currentLocX >= 0 && currentLocX < nutrientMap.GetLength(0) && currentLocY >= 0 && currentLocY < nutrientMap.GetLength(1))
+                {
+                    if(r == 0 && c == 0)
+                    {
+                        nutrientMap[currentLocX, currentLocY] += (added / totalDistro);
+                    }
+                    else
+                    {
+                        nutrientMap[currentLocX, currentLocY] += (added / totalDistro) / ((Mathf.Abs(r) + Mathf.Abs(c)) * 2);
+                    }
+
+                    if(nutrientMap[currentLocX, currentLocY] > 1)
+                    {
+                        nutrientMap[currentLocX, currentLocY] = 1;
+                    }
+                }
+            }
+        }
     }
 
     private void Render()

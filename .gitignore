@@ -16,6 +16,9 @@
 *.blend1
 *.blend1.meta
 
+# Imported assets 
+.Assets/Samples/
+
 # MemoryCaptures can get excessive in size.
 # They also could contain extremely sensitive data
 /[Mm]emoryCaptures/
@@ -97,3 +100,8 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+Assets/Samples/
+Assets/TextMesh Pro/
+*.meta
+Assets/GameAssets/Materials/TerrainMaterial.mat
+Assets/GameAssets/Materials/MaybePlants.shadergraph

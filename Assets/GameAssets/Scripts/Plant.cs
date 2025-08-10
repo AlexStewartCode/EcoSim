@@ -1,17 +1,28 @@
+using UnityEditor;
 using UnityEngine;
-using System.Collections.Generic;
 
 public class Plant : MonoBehaviour
 {
-    private float healthMax;
-    private float healthCurrent;
-    private float nutrientNeed;
-    private float growthRate;
-    private float nutrientsConsumed;
+    public float healthMax;
+    public float healthCurrent;
+    public float nutrientNeed;
+    public float growthRate;
+    public float nutrientsConsumed;
+    public float nutrientsRequiredStep;
+    public float size; 
+    
+    public float reproductionChance;
+    public float reproductionDist;
+    public bool isReproducing; 
+    public float childXPos;
+    public float childYPos; 
+
     public bool isAlive;
 
-    private GameObject visualPrefab;
+    public GameObject visualPrefab;
     public GameObject visual;
+
+    public float availNutrients; 
 
     public void SetVisual(GameObject visualPrefab)
     {
@@ -23,6 +34,8 @@ public class Plant : MonoBehaviour
         this.healthMax = healthMax;
         this.nutrientNeed = nutrientNeed;
         this.growthRate = growthRate;
+        reproductionChance = 1;
+        reproductionDist = Random.Range(1f, 500f);
     }
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
@@ -32,41 +45,95 @@ public class Plant : MonoBehaviour
         healthCurrent = healthMax;
         nutrientsConsumed = 0; 
         isAlive = true;
+        isReproducing = false;
+        size = 1f;
     }
 
     // Update is called once per frame
     void Update()
     {
+        
+    }
+
+    public void Step(float dTime)
+    {
         Terrain terrain = Core.instance.ground;
-        NutrientController nutrientCont = Core.instance.nutrientCont; 
+        NutrientController nutrientCont = Core.instance.nutrientCont;
+        float xBound = terrain.terrainData.size.x;
+        float yBound = terrain.terrainData.size.z;
+        float x = transform.position.x / xBound;
+        float y = transform.position.z / yBound;
 
-        float x = transform.position.x / terrain.terrainData.size.x;
-        float y = transform.position.z / terrain.terrainData.size.z;
-        float size = visual.transform.localScale.x;
+        //availNutrients = nutrientCont.GetAvailNutrients(x, y, size);
 
-        //float nutrientsAvailable = nutrientCont.GetNutrients(x, y, size);
+        nutrientsRequiredStep = Mathf.Pow(size, 2f) * nutrientNeed * dTime;
 
-        //float nutrientsNeededFrame = (nutrientNeed * Time.deltaTime);
+        float nutrientDeficit = nutrientCont.PlantNutrientUse(x, y, size, nutrientsRequiredStep);
 
-        float nutrientsNeededFrame = (nutrientNeed);
-
-        bool CanStayAlive = nutrientCont.PlantNutrientUse(x, y, size, nutrientsNeededFrame);
-
-        /*if (nutrientsNeededFrame > nutrientsAvailable)
+        if (nutrientDeficit > 0)
         {
-            healthCurrent -= Time.deltaTime * 0.1f * healthMax;
+            healthCurrent -= nutrientDeficit;
+            nutrientsConsumed += (nutrientsRequiredStep - nutrientDeficit);
         }
         else
         {
-            visual.transform.localScale += visual.transform.localScale * (growthRate * Time.deltaTime);
-            nutrientCont.UseNutrients(x, y, size, nutrientsNeededFrame);
-            nutrientsConsumed += nutrientsNeededFrame;
+            float adjustedGrowth = (growthRate * 1.5f) / size; 
+            size += adjustedGrowth * dTime;
+            if(visual != null)
+            {
+                visual.transform.localScale = new Vector3(size, size, size);
+            }
+            nutrientsConsumed += nutrientsRequiredStep;
         }
 
         if (healthCurrent <= 0)
         {
-            nutrientCont.AddNutrients(x, y, (nutrientsConsumed * 0.9f));
+            nutrientCont.AddNutrients(x, y, (nutrientsConsumed * 0.9f), size);
             isAlive = false;
-        }*/
+        }
+
+        float reproRoll = Random.Range(0.0f, 1f);
+        if(reproRoll > 1 - (reproductionChance * dTime))
+        {
+            float direction;
+            float xOffset;
+            float yOffset;
+            int counter = 0; 
+            do
+            {
+                direction = Random.Range(0f, 360f);
+                xOffset = (reproductionDist + Random.Range(-0.1f * reproductionDist, 0.1f * reproductionDist)) * Mathf.Cos(direction * Mathf.Deg2Rad);
+                yOffset = (reproductionDist + Random.Range(-0.1f * reproductionDist, 0.1f * reproductionDist)) * Mathf.Sin(direction * Mathf.Deg2Rad);
+
+                childXPos = transform.position.x + xOffset;
+                childYPos = transform.position.y + yOffset;
+                counter++; 
+                if(counter >= 50)
+                {
+                    return;
+                }
+            } while (childXPos > xBound || childXPos < 0 || childYPos > yBound || childYPos < 0);
+            isReproducing = true;
+        }
+    }
+
+    public void childMade()
+    {
+        childXPos = 0;
+        childYPos = 0;
+        isReproducing = false;
+    }
+
+    private void OnDrawGizmos()
+    {
+        Vector3 camPos = SceneView.currentDrawingSceneView.camera.transform.position;
+        if(Vector3.Distance(camPos, this.transform.position) > 15 * visual.transform.localScale.x)
+        {
+            return;
+        }
+        GUIStyle big = new GUIStyle();
+        big.fontSize = 50;
+        big.normal.textColor = Color.purple;
+        Handles.Label(transform.position, $"Health: {healthCurrent}\nSize: {size}\nnRequired: {nutrientsRequiredStep}", big);
     }
 }

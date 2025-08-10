@@ -9,20 +9,21 @@ public class PlantController : MonoBehaviour
     List<GameObject> plants;
     float xBound;
     float zBound;
+    Terrain terrain;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         plants = new List<GameObject>();
-        Terrain terrain = Core.instance.ground;
+        terrain = Core.instance.ground;
         xBound = terrain.GetComponent<Terrain>().terrainData.size.x;
         zBound = terrain.GetComponent<Terrain>().terrainData.size.z;
 
-        for (int i = 0; i < 1; i++)
+        for (int i = 0; i < 100; i++)
         {
             GameObject newPlant = Instantiate(plantPrefab);
             newPlant.GetComponent<Plant>().SetVisual(plantModels[Random.Range(0, plantModels.Count - 1)]);
-            newPlant.GetComponent<Plant>().SetValues(Random.Range(10f, 100f), Random.Range(0.1f, 0.2f), Random.Range(0.1f, 0.25f));
+            newPlant.GetComponent<Plant>().SetValues(Random.Range(10f, 100f), Random.Range(0.5f, 1f), Random.Range(0.1f, 0.25f));
             float x = Random.Range(0, xBound);
             float z = Random.Range(0, zBound);
             float y = terrain.SampleHeight(new Vector3(x, 0, z));
@@ -42,13 +43,46 @@ public class PlantController : MonoBehaviour
         {
             GameObject currentPlant = plants[i];
             Plant plantI = currentPlant.GetComponent<Plant>();
-            if(!plantI.isAlive)
+            if (!plantI.isAlive)
             {
                 currentPlant.SetActive(false);
                 plants.Remove(currentPlant);
                 Destroy(currentPlant);
                 i--;
             }
+            else
+            {
+                if (plantI.isReproducing)
+                {
+                    GameObject child = Instantiate(plantPrefab);
+                    Plant childPlant = child.GetComponent<Plant>();
+                    childPlant.SetVisual(plantI.visualPrefab);
+                    childPlant.SetValues(plantI.healthMax + Random.Range(-0.5f, 0.5f), plantI.nutrientNeed + Random.Range(-0.01f, 0.01f), plantI.growthRate + Random.Range(-0.01f, 0.01f));
+
+                    float x = plantI.childXPos;
+                    float z = plantI.childYPos;
+                    float y = terrain.SampleHeight(new Vector3(plantI.childXPos, 0, plantI.childYPos));
+                    Vector3 childPos = new Vector3(x, y, z);
+
+                    Vector3 normal = terrain.terrainData.GetInterpolatedNormal(plantI.childXPos / xBound, plantI.childYPos / zBound);
+                    child.transform.LookAt(normal);
+                    child.transform.Rotate(new Vector3(90, 0, 0));
+
+                    child.transform.position = childPos;
+                    plants.Add(child);
+                    i++;
+
+                    plantI.childMade();
+                }
+            }
+        }
+    }
+
+    public void Step(float dTime)
+    {
+        foreach(GameObject plant in plants)
+        {
+            plant.GetComponent<Plant>().Step(dTime);
         }
     }
 }
