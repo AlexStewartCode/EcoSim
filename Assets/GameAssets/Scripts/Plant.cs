@@ -1,23 +1,19 @@
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class Plant : MonoBehaviour
 {
-    public float healthMax;
-    public float healthCurrent;
-    public float nutrientNeed;
+    private float health; 
     public float growthRate;
     public float nutrientsConsumed;
-    public float nutrientsRequiredStep;
+    public float maxSize; 
     public float size; 
     
     public float reproductionChance;
-    public float reproductionDist;
-    public bool isReproducing; 
-    public float childXPos;
-    public float childYPos; 
 
     public bool isAlive;
+    public bool isReproducing;
 
     public GameObject visualPrefab;
     public GameObject visual;
@@ -29,23 +25,20 @@ public class Plant : MonoBehaviour
         this.visualPrefab = visualPrefab;
     }
 
-    public void SetValues(float healthMax, float nutrientNeed, float growthRate)
+    public void SetValues(float growthRate, float maxSize, float reproductionChance)
     {
-        this.healthMax = healthMax;
-        this.nutrientNeed = nutrientNeed;
+        health = 10; 
         this.growthRate = growthRate;
-        reproductionChance = 1;
-        reproductionDist = Random.Range(1f, 500f);
+        this.maxSize = maxSize;
+        this.reproductionChance = reproductionChance;
     }
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     private void Start()
     {
         visual = Instantiate(visualPrefab, transform);
-        healthCurrent = healthMax;
         nutrientsConsumed = 0; 
         isAlive = true;
-        isReproducing = false;
         size = 1f;
     }
 
@@ -58,70 +51,86 @@ public class Plant : MonoBehaviour
     public void Step(float dTime)
     {
         Terrain terrain = Core.instance.ground;
+        float xPosition = transform.position.x / terrain.terrainData.size.x;
+        float zPosition = transform.position.z / terrain.terrainData.size.z;
+
         NutrientController nutrientCont = Core.instance.nutrientCont;
-        float xBound = terrain.terrainData.size.x;
-        float yBound = terrain.terrainData.size.z;
-        float x = transform.position.x / xBound;
-        float y = transform.position.z / yBound;
-
-        //availNutrients = nutrientCont.GetAvailNutrients(x, y, size);
-
-        nutrientsRequiredStep = Mathf.Pow(size, 2f) * nutrientNeed * dTime;
-
-        float nutrientDeficit = nutrientCont.PlantNutrientUse(x, y, size, nutrientsRequiredStep);
-
-        if (nutrientDeficit > 0)
+        if (size >= maxSize)
         {
-            healthCurrent -= nutrientDeficit;
-            nutrientsConsumed += (nutrientsRequiredStep - nutrientDeficit);
+            TryReproduce(dTime, nutrientCont, xPosition, zPosition);
         }
         else
         {
-            float adjustedGrowth = (growthRate * 1.5f) / size; 
-            size += adjustedGrowth * dTime;
-            if(visual != null)
+            if(size > maxSize * 0.67f && Random.value > 0.5f)
             {
-                visual.transform.localScale = new Vector3(size, size, size);
+                TryReproduce(dTime, nutrientCont, xPosition, zPosition);
             }
-            nutrientsConsumed += nutrientsRequiredStep;
-        }
-
-        if (healthCurrent <= 0)
-        {
-            nutrientCont.AddNutrients(x, y, (nutrientsConsumed * 0.9f), size);
-            isAlive = false;
-        }
-
-        float reproRoll = Random.Range(0.0f, 1f);
-        if(reproRoll > 1 - (reproductionChance * dTime))
-        {
-            float direction;
-            float xOffset;
-            float yOffset;
-            int counter = 0; 
-            do
+            else
             {
-                direction = Random.Range(0f, 360f);
-                xOffset = (reproductionDist + Random.Range(-0.1f * reproductionDist, 0.1f * reproductionDist)) * Mathf.Cos(direction * Mathf.Deg2Rad);
-                yOffset = (reproductionDist + Random.Range(-0.1f * reproductionDist, 0.1f * reproductionDist)) * Mathf.Sin(direction * Mathf.Deg2Rad);
+                Grow(dTime, nutrientCont, xPosition, zPosition);
+            }
+        }
 
-                childXPos = transform.position.x + xOffset;
-                childYPos = transform.position.y + yOffset;
-                counter++; 
-                if(counter >= 50)
-                {
-                    return;
-                }
-            } while (childXPos > xBound || childXPos < 0 || childYPos > yBound || childYPos < 0);
-            isReproducing = true;
+        if (health <= 0)
+        {
+            isAlive = false;
+            nutrientCont.AddNutrients(xPosition, zPosition, nutrientsConsumed * 0.9f, size);
         }
     }
 
-    public void childMade()
+    private void TryReproduce(float dTime, NutrientController nutrientCont, float xPosition, float zPosition)
     {
-        childXPos = 0;
-        childYPos = 0;
-        isReproducing = false;
+        if(reproductionChance >= 1)
+        {
+            ReproduceSuccess(dTime, nutrientCont, xPosition, zPosition);
+        }
+        else
+        {
+            float stepChance = reproductionChance * dTime; 
+
+            if(Random.value < stepChance)
+            {
+                ReproduceSuccess(dTime, nutrientCont, xPosition, zPosition);
+            }
+        }
+    }
+
+    private void ReproduceSuccess(float dTime, NutrientController nutrientCont, float xPosition, float zPosition)
+    {
+        float stepGrowthRate = maxSize - Mathf.Pow(size, 2);
+        stepGrowthRate *= growthRate;
+        stepGrowthRate *= dTime;
+
+        float stepNutrientCost = (stepGrowthRate / 2) + 0.5f;
+        float nutrientDeficit = nutrientCont.PlantNutrientUse(xPosition, zPosition, size, stepNutrientCost);
+        
+        // Take damage if there aren't enough nutrients to reproduce  
+        if(nutrientDeficit > 0)
+        {    
+            health -= nutrientDeficit;
+        }
+        isReproducing = true;
+    }
+
+    private void Grow(float dTime, NutrientController nutrientCont, float xPosition, float zPosition)
+    {
+        float stepGrowthRate = maxSize - Mathf.Pow(size, 2);
+        stepGrowthRate *= growthRate;
+        stepGrowthRate *= dTime;
+
+        float stepNutrientCost = (stepGrowthRate / 2) + 0.5f;
+        float nutrientDeficit = nutrientCont.PlantNutrientUse(xPosition, zPosition, size, stepNutrientCost);
+        if (nutrientDeficit > 0)
+        {
+            health -= nutrientDeficit * dTime;
+            nutrientsConsumed += stepNutrientCost - nutrientDeficit;
+        }
+        else
+        {
+            nutrientsConsumed += stepNutrientCost;
+            size += stepGrowthRate;
+            GrowVisual(stepGrowthRate);
+        }
     }
 
     private void OnDrawGizmos()
@@ -134,6 +143,11 @@ public class Plant : MonoBehaviour
         GUIStyle big = new GUIStyle();
         big.fontSize = 50;
         big.normal.textColor = Color.purple;
-        Handles.Label(transform.position, $"Health: {healthCurrent}\nSize: {size}\nnRequired: {nutrientsRequiredStep}", big);
+        Handles.Label(transform.position, $"Health: {health}", big);
+    }
+
+    void GrowVisual(float growthAmount)
+    {
+        visual.transform.localScale += visual.transform.localScale * growthAmount;
     }
 }
